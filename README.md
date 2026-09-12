@@ -6,7 +6,7 @@
 
 This tool converts DICOM files to NIfTI format and programmatically harmonizes the resulting JSON sidecar to ensure compliance with BIDS (Brain Imaging Data Structure) metadata standards.
 
-Version **v1.0.0** marks the project's first stable release under its definitive name, BIDSCard (formerly FixSidecar). It fixes a broken `pip install` on current systems and a CLI inconsistency in `update_json_sidecar.py`'s Exam Card handling; see [CHANGELOG.md](CHANGELOG.md) for details. It builds on v0.7.3's generalized and extensible slice-order framework, legacy acquisition preservation, metadata provenance tracking, and improved CLI consistency (including renaming `--no-fmri` to `--no-epi`, since BIDSCard harmonizes sidecars for DWI as well as fMRI), plus a self-contained Docker/Singularity runtime that needs nothing installed locally.
+Version **v1.0.0** marks the project's first stable release under its definitive name, BIDSCard (formerly FixSidecar). `update_json_sidecar.py` can now correct a sidecar without a DICOM file at all, using an Exam Card (with a manually specified `--series-description`) and/or manual overrides instead; it also fixes a broken `pip install` on current systems and a CLI inconsistency in Exam Card handling. See [CHANGELOG.md](CHANGELOG.md) for details. It builds on v0.7.3's generalized and extensible slice-order framework, legacy acquisition preservation, metadata provenance tracking, and improved CLI consistency (including renaming `--no-fmri` to `--no-epi`, since BIDSCard harmonizes sidecars for DWI as well as fMRI), plus a self-contained Docker/Singularity runtime that needs nothing installed locally.
 
 ---
 
@@ -235,7 +235,7 @@ instead — the same command works with `apptainer run ...`.)
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$(pwd)":/data \
-    gamorosino/bidscard:1.0.0 update_json_sidecar.py example.dcm existing.json updated.json
+    gamorosino/bidscard:1.0.0 update_json_sidecar.py existing.json updated.json --dicom example.dcm
 ```
 
 All paths passed to either script should be relative to the bind-mounted
@@ -253,7 +253,7 @@ python dcm_convert.py <dicom_file> <output_dir> [options]
 Or use the standalone script to update an existing NIfTI JSON sidecar:
 
 ```bash
-python update_json_sidecar.py <dicom_file> <json_file> <output_file> [options]
+python update_json_sidecar.py <json_file> <output_file> [--dicom <path>] [options]
 ```
 
 ---
@@ -332,9 +332,6 @@ python update_json_sidecar.py <dicom_file> <json_file> <output_file> [options]
 
 ### Required
 
-* `<dicom_file>`
-  Path to the DICOM file.
-
 * `<json_file>`
   Path to the existing JSON sidecar file.
 
@@ -345,8 +342,24 @@ python update_json_sidecar.py <dicom_file> <json_file> <output_file> [options]
 
 ### Optional Flags
 
+* `--dicom <path>`
+  Path to the DICOM file this sidecar corresponds to. Optional: without
+  it, the tool operates DICOM-free, using only the existing JSON sidecar,
+  an `--exam-card`, and/or manual overrides (`--phase-encoding-direction`,
+  `--slice-order`). Any field it would otherwise infer from the DICOM
+  header must already be present in the JSON sidecar, come from the Exam
+  Card, or be supplied manually.
+
 * `--exam-card <path>`
-  Path to a Philips Exam Card file.
+  Path to a Philips Exam Card file. Requires `--dicom` or
+  `--series-description` to identify which Exam Card protocol matches
+  this acquisition.
+
+* `--series-description <name>`
+  Manually specify the acquisition's `SeriesDescription`, to match the
+  corresponding Exam Card protocol. Required when using `--exam-card`
+  without `--dicom`, since there is then no DICOM `SeriesDescription` to
+  read automatically.
 
 * `--compute-slice-timing`
   Enable calculation of `SliceTiming`.
@@ -401,9 +414,19 @@ python dcm_convert.py example_dicom_folder output_directory \
 ### Standalone JSON Update
 
 ```bash
-python update_json_sidecar.py example.dcm existing.json updated.json \
+python update_json_sidecar.py existing.json updated.json \
+    --dicom example.dcm \
     --compute-slice-timing \
     --slice-order-mode interleaved
+```
+
+### Standalone JSON Update Without a DICOM
+
+```bash
+python update_json_sidecar.py existing.json updated.json \
+    --exam-card ExamCard_2024_10_15.txt \
+    --series-description "WIP_EPI_Task_Run1" \
+    --compute-slice-timing
 ```
 
 ---

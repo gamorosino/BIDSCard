@@ -8,6 +8,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [1.0.0] - 2026-09-11
 
+### Added
+
+- **`update_json_sidecar.py` can now run without a DICOM file.** Previously
+  it unconditionally read a DICOM (`pydicom.dcmread(...)` ran regardless of
+  whether any of its fields were actually needed), making it a hard
+  requirement even for post-hoc corrections that could otherwise be driven
+  entirely by the JSON sidecar, an Exam Card, and/or manual overrides. The
+  DICOM is now supplied via an optional `--dicom <path>` flag; without it,
+  the tool operates DICOM-free using the existing JSON sidecar, an
+  `--exam-card`, and/or manual overrides (`--phase-encoding-direction`,
+  `--slice-order`). Since matching an Exam Card protocol block ordinarily
+  relies on the DICOM's `SeriesDescription`, a new `--series-description
+  <name>` flag lets that be supplied manually instead. Using `--exam-card`
+  without `--dicom` now requires `--series-description`, and raises a clear
+  error if it's missing.
+
 ### Fixed
 
 - **`requirements.txt`** — Bumps the pinned `dcm2niix` version from
@@ -19,20 +35,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   pin ships a prebuilt manylinux wheel, so it doesn't need to build from
   source at all. (Conda and Docker installs were unaffected, since they
   already install prebuilt `dcm2niix` binaries via conda-forge/apt.)
-- **`update_json_sidecar.py`** — Adds a proper `--exam-card <path>` flag,
-  matching `dcm_convert.py`. Previously the Exam Card path was read from an
-  undocumented positional 4th argument (`sys.argv[4]`), which broke as soon
-  as any other flag was also passed: e.g. `update_json_sidecar.py a.dcm
-  b.json out.json --compute-slice-timing` silently read the literal string
-  `--compute-slice-timing` as the Exam Card path. The old positional form is
-  still accepted for backward compatibility, but only when no other flags
-  are passed.
+- **`update_json_sidecar.py`'s total-readout-time fallback** — Guarded a
+  latent crash: when `EstimatedTotalReadoutTime` was absent from the JSON
+  sidecar (and `--compute-total-readout` wasn't passed), the code called
+  `float(ds.get("EstimatedTotalReadoutTime", None))`, which raised
+  `TypeError` instead of the intended `ValueError` whenever that DICOM
+  field was also absent (essentially always, since it isn't a standard
+  DICOM tag).
 
 ### Changed
 
+- **`update_json_sidecar.py`'s CLI signature.** `<dicom_file>` is no
+  longer a required positional argument; usage is now
+  `update_json_sidecar.py <json_file> <output_file> [--dicom <path>]
+  [--exam-card <path>] [--series-description <name>] [options]`. The Exam
+  Card path is likewise `--exam-card`-only now (the undocumented
+  positional-4th-argument form, briefly supported for backward
+  compatibility earlier in this same release, is removed).
 - **Project renamed from FixSidecar to BIDSCard.** The tool, repository, and
   Docker Hub image (`gamorosino/bidscard`, replacing `gamorosino/fixsidecar`)
-  are now named BIDSCard; no functional change. The former
+  are now named BIDSCard; no functional change beyond the above. The former
   `gamorosino/fixSidecar` repository has been marked deprecated and points
   here.
 

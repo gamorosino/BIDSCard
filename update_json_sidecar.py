@@ -311,13 +311,19 @@ def extract_parameters_from_exam_card(protocol_details):
     return tr, num_slices, mb_factor
 
 
-def determine_phase_encoding_direction(dicom_path, scanner_type="SIEMENS", exam_card_path=None, flip_phase=False):
-    """Determine BIDS PhaseEncodingDirection from DICOM or Exam Card, supporting SIEMENS and PHILIPS."""
+def determine_phase_encoding_direction(dicom_path, scanner_type="SIEMENS", exam_card_path=None, flip_phase=False, series_description=None):
+    """Determine BIDS PhaseEncodingDirection from DICOM or Exam Card, supporting SIEMENS and PHILIPS.
+
+    dicom_path may be None (DICOM-free operation), in which case series_description
+    must be supplied to match the Exam Card protocol, and the DICOM-tag polarity
+    fallback below is unavailable.
+    """
     rowcol_to_niftidim = {'COL': 'j', 'ROW': 'i'}
 
-    # Read DICOM
-    ds = pydicom.dcmread(_resolve_dicom_file(dicom_path))
-    series_description = ds.get("SeriesDescription", "Unknown").strip()
+    # Read DICOM, if provided
+    ds = pydicom.dcmread(_resolve_dicom_file(dicom_path)) if dicom_path else {}
+    if not series_description:
+        series_description = ds.get("SeriesDescription", "Unknown").strip() if dicom_path else "Unknown"
     protocol_details = None
     if exam_card_path:
         protocol_details = match_protocol_in_exam_card(series_description, exam_card_path)
@@ -351,6 +357,13 @@ def determine_phase_encoding_direction(dicom_path, scanner_type="SIEMENS", exam_
 
                 return pe_dir
 
+    if not dicom_path:
+        raise ValueError(
+            f"Could not determine PhaseEncodingDirection for SeriesDescription: '{series_description}' "
+            "without a DICOM file. Provide --phase-encoding-direction explicitly, or an --exam-card "
+            "whose protocol resolves it, or a --dicom file."
+        )
+
     inplane_pe_dir = ds.get((0x0018, 0x1312), None)
     if inplane_pe_dir is None:
         raise ValueError(f"InPlanePhaseEncodingDirection not found in DICOM for SeriesDescription: '{series_description}'")
@@ -368,9 +381,9 @@ def determine_phase_encoding_direction(dicom_path, scanner_type="SIEMENS", exam_
 
 
 def update_json_with_dicom_info(
-    dicom_path,
     json_path,
     output_path,
+    dicom_path=None,
     calculate_total_readout=False,
     scanner_type="SIEMENS",
     exam_card_path=None,
@@ -380,12 +393,29 @@ def update_json_with_dicom_info(
     user_phase_encoding_direction=None,
     slice_order_mode="legacy",
     slice_order_step=1,
+    user_series_description=None,
 ):
+    """Update a JSON sidecar from a DICOM file, an Exam Card, and/or manual overrides.
 
-    # Read the DICOM file
-    ds = pydicom.dcmread(_resolve_dicom_file(dicom_path))
+    dicom_path is optional: when omitted, matching an Exam Card protocol requires
+    user_series_description (there is no DICOM SeriesDescription to read), and any
+    field this function would otherwise infer from the DICOM header must already be
+    present in the JSON sidecar, come from the Exam Card, or be supplied manually
+    (user_slice_order, user_phase_encoding_direction).
+    """
+
+    if exam_card_path and not dicom_path and not user_series_description:
+        raise ValueError(
+            "Using --exam-card without --dicom requires --series-description, to "
+            "identify which Exam Card protocol matches this acquisition."
+        )
+
+    # Read the DICOM file, if provided; otherwise ds stands in as an always-empty
+    # source so downstream `ds.get(...)`/`getattr(ds, ...)` calls degrade to their
+    # JSON/Exam Card/manual fallbacks instead of erroring.
+    ds = pydicom.dcmread(_resolve_dicom_file(dicom_path)) if dicom_path else {}
     with open(json_path, 'r') as f:
-        json_data = json.load(f)    
+        json_data = json.load(f)
     pes_raw = json_data.get("PhaseEncodingSteps")
     phase_encoding_steps = int(pes_raw) if pes_raw is not None else None
     ees_raw = json_data.get("EstimatedEffectiveEchoSpacing")
@@ -397,7 +427,7 @@ def update_json_with_dicom_info(
     if num_slices: num_slices=int(num_slices)
     mb_factor = json_data.get("MultiBandFactor", None)
     if mb_factor: mb_factor=int(mb_factor)
-    series_description = ds.get("SeriesDescription", "Unknown").strip()
+    series_description = user_series_description or (ds.get("SeriesDescription", "Unknown").strip() if dicom_path else "Unknown")
 
     print('Read information from provided json file...')
     print("tr: ",tr)
@@ -405,11 +435,6 @@ def update_json_with_dicom_info(
     print("mb_factor: ",mb_factor)
     print("effective_echo_spacing: ",effective_echo_spacing)
     print("phase_encoding_steps: ",phase_encoding_steps)
-
-
-    # If parameters are missing, fallback to DICOM
-    if tr is None or num_slices is None or mb_factor is None or effective_echo_spacing is None or phase_encoding_steps is None:
-        ds = pydicom.dcmread(_resolve_dicom_file(dicom_path))
 
     if tr is None:
         tr_dicom = getattr(ds, "RepetitionTime", None)
@@ -443,7 +468,7 @@ def update_json_with_dicom_info(
     # Fallback to exam card if parameters are missing
     if tr is None or num_slices is None or mb_factor is None:
         if exam_card_path:
-            protocol_details = match_protocol_in_exam_card(ds.get("SeriesDescription", "Unknown"), exam_card_path)
+            protocol_details = match_protocol_in_exam_card(series_description, exam_card_path)
             if protocol_details:
                 tr_card, slices_card, mb_card = extract_parameters_from_exam_card(protocol_details)
                 if tr is None and tr_card is not None:
@@ -498,7 +523,7 @@ def update_json_with_dicom_info(
         print(f"Using user-provided PhaseEncodingDirection: {bids_phase_encoding_direction}")
     else:
         bids_phase_encoding_direction = determine_phase_encoding_direction(
-            dicom_path, scanner_type, exam_card_path, flip_phase=flip_phase
+            dicom_path, scanner_type, exam_card_path, flip_phase=flip_phase, series_description=series_description
         )
 
     # Calculate Total Readout Time
@@ -506,7 +531,7 @@ def update_json_with_dicom_info(
     if calculate_total_readout:
         protocol_details = None
         if exam_card_path:
-            protocol_details = match_protocol_in_exam_card(ds.get("SeriesDescription", "Unknown"), exam_card_path)
+            protocol_details = match_protocol_in_exam_card(series_description, exam_card_path)
 
         # Calculate Total Readout Time
         effective_echo_spacing_philips, total_readout_time_philips = calculate_total_readout_time_from_philips(ds, json_data)
@@ -533,8 +558,9 @@ def update_json_with_dicom_info(
         trt_raw = json_data.get("EstimatedTotalReadoutTime")
         total_readout_time = float(trt_raw) if trt_raw is not None else None
         print('Set Total Readout Time as EstimatedTotalReadoutTime field of json file')
-        if total_readout_time is None:
-            total_readout_time = float(ds.get("EstimatedTotalReadoutTime", None))
+        if total_readout_time is None and dicom_path:
+            trt_dicom = ds.get("EstimatedTotalReadoutTime", None)
+            total_readout_time = float(trt_dicom) if trt_dicom is not None else None
         if total_readout_time is None:
             raise ValueError('EstimatedTotalReadoutTime missed from json file...')
     # Heuristic unit guard: valid TRT in seconds is always < 10 s; if larger, value is likely in ms.
@@ -569,8 +595,10 @@ def update_json_with_dicom_info(
 def print_help():
     print("""
 Usage:
-  python update_json_sidecar.py <dicom_file> <json_file> <output_file>
+  python update_json_sidecar.py <json_file> <output_file>
+      [--dicom <path>]
       [--exam-card <path>]
+      [--series-description <name>]
       [--compute-slice-timing]
       [--slice-order "<json_string>"]
       [--slice-order-mode legacy|ascending|interleaved|stepped]
@@ -579,11 +607,25 @@ Usage:
       [--flip-phase]
 
 Options:
+  --dicom <path>
+      Path to the DICOM file this sidecar corresponds to. Optional: without
+      it, BIDSCard operates DICOM-free, using only the existing JSON sidecar,
+      an --exam-card, and/or manual overrides (--phase-encoding-direction,
+      --slice-order). Any field this tool would otherwise infer from the
+      DICOM header must already be present in the JSON sidecar, come from
+      the Exam Card, or be supplied manually.
+
   --exam-card <path>
       Path to a Philips Exam Card .txt/.html export, used to recover fields
-      absent from the DICOM header. (For backward compatibility, a 4th
-      positional argument is also accepted as the Exam Card path, but only
-      when no other flags are passed; --exam-card is recommended instead.)
+      absent from the DICOM header (or absent entirely, when no DICOM is
+      given). Requires --dicom or --series-description to identify which
+      Exam Card protocol matches this acquisition.
+
+  --series-description <name>
+      Manually specify the acquisition's SeriesDescription, to match the
+      corresponding Exam Card protocol. Required when using --exam-card
+      without --dicom, since there is then no DICOM SeriesDescription to
+      read automatically.
 
   --compute-slice-timing
       Enable SliceTiming calculation.
@@ -626,13 +668,20 @@ if __name__ == '__main__':
         print(f"update_json_sidecar.py v{__version__}  Python {sys.version.split()[0]}  ({sys.platform})")
         sys.exit(0)
 
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 3:
         print_help()
         sys.exit(1)
 
-    dicom_file = sys.argv[1]
-    json_file = sys.argv[2]
-    output_file = sys.argv[3]
+    json_file = sys.argv[1]
+    output_file = sys.argv[2]
+
+    dicom_file = None
+    if "--dicom" in sys.argv:
+        try:
+            dicom_file = sys.argv[sys.argv.index("--dicom") + 1]
+        except IndexError:
+            print("Error: --dicom requires a path argument.")
+            sys.exit(1)
 
     exam_card_file = None
     if "--exam-card" in sys.argv:
@@ -641,12 +690,14 @@ if __name__ == '__main__':
         except IndexError:
             print("Error: --exam-card requires a path argument.")
             sys.exit(1)
-    elif len(sys.argv) > 4 and not sys.argv[4].startswith("-"):
-        # Legacy positional form: <dicom_file> <json_file> <output_file> <exam_card_file>.
-        # Only honored when the 4th argument isn't itself a flag, since with any other
-        # optional flag also passed (e.g. --compute-slice-timing) it would otherwise be
-        # misread as the exam card path.
-        exam_card_file = sys.argv[4]
+
+    series_description_arg = None
+    if "--series-description" in sys.argv:
+        try:
+            series_description_arg = sys.argv[sys.argv.index("--series-description") + 1]
+        except IndexError:
+            print("Error: --series-description requires a value.")
+            sys.exit(1)
 
     compute_slice_timing = "--compute-slice-timing" in sys.argv
     slice_order_arg = None
@@ -705,9 +756,9 @@ if __name__ == '__main__':
 
 
     update_json_with_dicom_info(
-    dicom_file,
     json_file,
     output_file,
+    dicom_path=dicom_file,
     calculate_total_readout=calculate_total_readout,
     scanner_type=scanner_type,
     exam_card_path=exam_card_file,
@@ -717,4 +768,5 @@ if __name__ == '__main__':
     user_phase_encoding_direction=phase_encoding_direction,
     slice_order_mode=slice_order_mode,
     slice_order_step=slice_order_step,
+    user_series_description=series_description_arg,
 )
