@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **Project renamed from FixSidecar to BIDSCard.** The tool, repository, and
+  Docker Hub image (`gamorosino/bidscard`, replacing `gamorosino/fixsidecar`)
+  are now named BIDSCard; no functional change. The former
+  `gamorosino/fixSidecar` repository has been marked deprecated and points
+  here.
+
+---
+
 ## [0.7.3] - 2026-08-07
 
 ### Added
@@ -14,7 +26,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `numpy`, and `dcm2niix` installed from Debian's package) so `dcm_convert.py`
   and `update_json_sidecar.py` can be run via Docker or Singularity/Apptainer
   without installing anything locally. See the README's "Running via Docker /
-  Singularity / Apptainer" section. Published as `gamorosino/fixsidecar` on
+  Singularity / Apptainer" section. Published as `gamorosino/bidscard` on
   Docker Hub.
 - **Clear error for `.ExamCard` input** — `--exam-card` now detects Philips's
   proprietary SOAP/XML `.ExamCard` format (the scanner console's protocol-editor
@@ -22,7 +34,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   "no match" per series. That format carries no readable acquisition parameters
   and would require a Philips-proprietary decoder we don't have; the message
   points users to the `.txt`/`.html` export of the same protocol, which
-  FixSidecar already parses successfully.
+  BIDSCard already parses successfully.
 
 ---
 
@@ -30,7 +42,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
-- **`dcm_convert.py`** — Renamed `--no-fmri` to `--no-epi`. FixSidecar's sidecar
+- **`dcm_convert.py`** — Renamed `--no-fmri` to `--no-epi`. BIDSCard's sidecar
   harmonization applies to any EPI acquisition (fMRI and DWI alike), not just fMRI,
   so `--no-fmri` was a misleading name for what it actually skips. This is a
   breaking CLI change: update any scripts that pass `--no-fmri`.

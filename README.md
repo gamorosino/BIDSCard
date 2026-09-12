@@ -1,10 +1,12 @@
-# Fix Sidecar
+# BIDSCard
+
+*(Formerly named FixSidecar. See [CHANGELOG.md](CHANGELOG.md) for the rename notice.)*
 
 ## **Overview**
 
 This tool converts DICOM files to NIfTI format and programmatically harmonizes the resulting JSON sidecar to ensure compliance with BIDS (Brain Imaging Data Structure) metadata standards.
 
-Version **v0.7.3** introduces a generalized and extensible slice-order framework, legacy acquisition preservation, metadata provenance tracking, and improved CLI consistency (including renaming `--no-fmri` to `--no-epi`, since FixSidecar harmonizes sidecars for DWI as well as fMRI), plus a self-contained Docker/Singularity runtime that needs nothing installed locally.
+Version **v0.7.3** introduces a generalized and extensible slice-order framework, legacy acquisition preservation, metadata provenance tracking, and improved CLI consistency (including renaming `--no-fmri` to `--no-epi`, since BIDSCard harmonizes sidecars for DWI as well as fMRI), plus a self-contained Docker/Singularity runtime that needs nothing installed locally.
 
 ---
 
@@ -27,7 +29,7 @@ Awards Wellcome 226486/Z/22/Z and NIH NINDS U24-NS140384 to F. Pestilli and NIH 
 If this tool contributes to your research, please cite:
 
 > Amorosino, G., Vinci-Booher, S., & Pestilli, F.  
-> *FixSidecar: harmonizing BIDS metadata during DICOM-to-NIfTI conversion for neuroimaging data with incomplete DICOM headers.*  
+> *BIDSCard: Automated recovery of acquisition metadata for BIDS.*  
 > Manuscript in preparation.
 
 ## Key Capabilities
@@ -192,37 +194,37 @@ pip install -r requirements.txt
 ### Conda
 
 ```bash
-conda env create -f res/config/fixSidecar.yml
-conda activate fixSidecar
+conda env create -f res/config/bidscard.yml
+conda activate bidscard
 ```
 
 ### Docker / Singularity / Apptainer
 
 A self-contained image (Python + `pydicom`/`numpy` + `dcm2niix`, no local
 install required) is published at
-[`gamorosino/fixsidecar`](https://hub.docker.com/r/gamorosino/fixsidecar) and
+[`gamorosino/bidscard`](https://hub.docker.com/r/gamorosino/bidscard) and
 can also be built locally from `docker/Dockerfile`.
 
 **Docker**, pulling the published image:
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$(pwd)":/data \
-    gamorosino/fixsidecar:0.7.3 dcm_convert.py example_dicom_folder output_directory
+    gamorosino/bidscard:0.7.3 dcm_convert.py example_dicom_folder output_directory
 ```
 
 Or build it yourself from the repository root:
 
 ```bash
-docker build -f docker/Dockerfile -t fixsidecar .
+docker build -f docker/Dockerfile -t bidscard .
 docker run --rm --user "$(id -u):$(id -g)" -v "$(pwd)":/data \
-    fixsidecar dcm_convert.py example_dicom_folder output_directory
+    bidscard dcm_convert.py example_dicom_folder output_directory
 ```
 
 **Singularity / Apptainer**, pulling the same image directly (no local build,
 no Docker installation required):
 
 ```bash
-singularity run --bind "$(pwd)":/data docker://gamorosino/fixsidecar:0.7.3 \
+singularity run --bind "$(pwd)":/data docker://gamorosino/bidscard:0.7.3 \
     dcm_convert.py example_dicom_folder output_directory
 ```
 
@@ -233,7 +235,7 @@ instead — the same command works with `apptainer run ...`.)
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$(pwd)":/data \
-    gamorosino/fixsidecar:0.7.3 update_json_sidecar.py example.dcm existing.json updated.json
+    gamorosino/bidscard:0.7.3 update_json_sidecar.py example.dcm existing.json updated.json
 ```
 
 All paths passed to either script should be relative to the bind-mounted
@@ -273,7 +275,7 @@ python update_json_sidecar.py <dicom_file> <json_file> <output_file> [options]
 ### Optional Flags
 
 * `--no-epi`
-  Skip JSON-sidecar update (useful for structural or non-EPI data; FixSidecar also handles DWI, not just fMRI).
+  Skip JSON-sidecar update (useful for structural or non-EPI data; BIDSCard also handles DWI, not just fMRI).
 
 * `--exam-card <path>`
   Path to a Philips Exam Card file for additional metadata extraction.

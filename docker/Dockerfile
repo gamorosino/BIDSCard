@@ -1,4 +1,4 @@
-# Self-contained FixSidecar runtime: Python + pydicom/numpy + dcm2niix, so
+# Self-contained BIDSCard runtime: Python + pydicom/numpy + dcm2niix, so
 # converting/harmonizing DICOM data needs nothing installed on the host beyond
 # Docker or Singularity/Apptainer.
 FROM python:3.9-slim
@@ -8,7 +8,7 @@ WORKDIR /app
 # dcm2niix is installed from Debian's package (precompiled binary; the PyPI
 # dcm2niix package builds from source via CMake and needs a full C++ toolchain,
 # which this apt package avoids). Debian trixie ships 1.0.20241211-1, matching
-# the version pinned in requirements.txt / res/config/fixSidecar.yml.
+# the version pinned in requirements.txt / res/config/bidscard.yml.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends dcm2niix \
     && rm -rf /var/lib/apt/lists/*

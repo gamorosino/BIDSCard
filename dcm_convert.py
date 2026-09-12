@@ -47,7 +47,7 @@ Created on Tue Oct 21 17:05:44 2024
 #########################################################################################################################
 ###################                                                                                   ###################
 ################### v0.7.2 Updates:                                                                   ###################
-###################   - Renamed --no-fmri to --no-epi (FixSidecar also harmonizes DWI, not just fMRI) ###################
+###################   - Renamed --no-fmri to --no-epi (BIDSCard also harmonizes DWI, not just fMRI) ###################
 ###################                                                                                   ###################
 #########################################################################################################################
 #########################################################################################################################
@@ -170,7 +170,7 @@ def main():
     parser.add_argument("output_dir", help="Output directory for the NIfTI and JSON files.")
     parser.add_argument(
         "--no-epi",
-        help="Skip JSON-sidecar update (useful for structural or non-EPI data; FixSidecar also handles DWI, not just fMRI).",
+        help="Skip JSON-sidecar update (useful for structural or non-EPI data; BIDSCard also handles DWI, not just fMRI).",
         action="store_true",
     )
     parser.add_argument("--exam-card", help="Path to the exam card file.", default=None)

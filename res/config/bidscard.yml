@@ -1,4 +1,4 @@
-name: fixSidecar
+name: bidscard
 channels:
   - defaults
   - conda-forge
