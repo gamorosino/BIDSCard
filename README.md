@@ -6,7 +6,7 @@
 
 This tool converts DICOM files to NIfTI format and programmatically harmonizes the resulting JSON sidecar to ensure compliance with BIDS (Brain Imaging Data Structure) metadata standards.
 
-Version **v0.7.3** introduces a generalized and extensible slice-order framework, legacy acquisition preservation, metadata provenance tracking, and improved CLI consistency (including renaming `--no-fmri` to `--no-epi`, since BIDSCard harmonizes sidecars for DWI as well as fMRI), plus a self-contained Docker/Singularity runtime that needs nothing installed locally.
+Version **v1.0.0** marks the project's first stable release under its definitive name, BIDSCard (formerly FixSidecar). It fixes a broken `pip install` on current systems and a CLI inconsistency in `update_json_sidecar.py`'s Exam Card handling; see [CHANGELOG.md](CHANGELOG.md) for details. It builds on v0.7.3's generalized and extensible slice-order framework, legacy acquisition preservation, metadata provenance tracking, and improved CLI consistency (including renaming `--no-fmri` to `--no-epi`, since BIDSCard harmonizes sidecars for DWI as well as fMRI), plus a self-contained Docker/Singularity runtime that needs nothing installed locally.
 
 ---
 
@@ -209,7 +209,7 @@ can also be built locally from `docker/Dockerfile`.
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$(pwd)":/data \
-    gamorosino/bidscard:0.7.3 dcm_convert.py example_dicom_folder output_directory
+    gamorosino/bidscard:1.0.0 dcm_convert.py example_dicom_folder output_directory
 ```
 
 Or build it yourself from the repository root:
@@ -224,7 +224,7 @@ docker run --rm --user "$(id -u):$(id -g)" -v "$(pwd)":/data \
 no Docker installation required):
 
 ```bash
-singularity run --bind "$(pwd)":/data docker://gamorosino/bidscard:0.7.3 \
+singularity run --bind "$(pwd)":/data docker://gamorosino/bidscard:1.0.0 \
     dcm_convert.py example_dicom_folder output_directory
 ```
 
@@ -235,7 +235,7 @@ instead — the same command works with `apptainer run ...`.)
 
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$(pwd)":/data \
-    gamorosino/bidscard:0.7.3 update_json_sidecar.py example.dcm existing.json updated.json
+    gamorosino/bidscard:1.0.0 update_json_sidecar.py example.dcm existing.json updated.json
 ```
 
 All paths passed to either script should be relative to the bind-mounted

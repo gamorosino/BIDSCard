@@ -5,10 +5,11 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-# dcm2niix is installed from Debian's package (precompiled binary; the PyPI
-# dcm2niix package builds from source via CMake and needs a full C++ toolchain,
-# which this apt package avoids). Debian trixie ships 1.0.20241211-1, matching
-# the version pinned in requirements.txt / res/config/bidscard.yml.
+# dcm2niix is installed from Debian's package (precompiled binary, avoiding
+# a from-source build). Debian trixie ships 1.0.20241211-1; this may differ
+# from the version pinned in requirements.txt / res/config/bidscard.yml,
+# which is fine since dcm2niix's DICOM parsing and BIDS output have been
+# stable across these releases.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends dcm2niix \
     && rm -rf /var/lib/apt/lists/*

@@ -22,7 +22,7 @@ Created on Tue Oct 21 17:05:44 2024
 ###################   - PhaseEncodingDirection inference with optional manual override               ###################
 ###################   - Provenance tracking of computed vs manual metadata                           ###################
 ###################                                                                                   ###################
-################### Version:        0.7.3                                                             ###################
+################### Version:        1.0.0                                                             ###################
 ###################                                                                                   ###################
 ################### Requirements:                                                                     ###################
 ###################   - Python modules: nibabel, dipy, pydicom                                       ###################
@@ -70,7 +70,7 @@ import sys
 from update_json_sidecar import update_json_with_dicom_info
 
 __title__ = "DICOM Convert and BIDS Sidecar Harmonization"
-__version__ = "0.7.3"
+__version__ = "1.0.0"
 __author__ = "Gabriele Amorosino"
 __contact__ = "gabriele.amorosino@utexas.edu"
 

@@ -21,7 +21,7 @@ Created on Tue Oct 21 17:05:44 2024
 ###################   - Philips-specific readout computation support                                 ###################
 ###################   - Metadata provenance tracking (manual vs computed fields)                     ###################
 ###################                                                                                   ###################
-################### Version:        0.7.3                                                             ###################
+################### Version:        1.0.0                                                             ###################
 ###################                                                                                   ###################
 ################### Requirements:                                                                     ###################
 ###################   - Python modules: pydicom, numpy                                               ###################
@@ -54,7 +54,7 @@ import ast
 import re
 
 __title__ = "BIDS JSON Sidecar Harmonization Engine"
-__version__ = "0.7.3"
+__version__ = "1.0.0"
 __author__ = "Gabriele Amorosino"
 __contact__ = "gabriele.amorosino@utexas.edu"
 
@@ -569,7 +569,8 @@ def update_json_with_dicom_info(
 def print_help():
     print("""
 Usage:
-  python update_json_sidecar.py <dicom_file> <json_file> <output_file> [exam_card_file]
+  python update_json_sidecar.py <dicom_file> <json_file> <output_file>
+      [--exam-card <path>]
       [--compute-slice-timing]
       [--slice-order "<json_string>"]
       [--slice-order-mode legacy|ascending|interleaved|stepped]
@@ -578,6 +579,12 @@ Usage:
       [--flip-phase]
 
 Options:
+  --exam-card <path>
+      Path to a Philips Exam Card .txt/.html export, used to recover fields
+      absent from the DICOM header. (For backward compatibility, a 4th
+      positional argument is also accepted as the Exam Card path, but only
+      when no other flags are passed; --exam-card is recommended instead.)
+
   --compute-slice-timing
       Enable SliceTiming calculation.
 
@@ -626,7 +633,20 @@ if __name__ == '__main__':
     dicom_file = sys.argv[1]
     json_file = sys.argv[2]
     output_file = sys.argv[3]
-    exam_card_file = sys.argv[4] if len(sys.argv) > 4 else None
+
+    exam_card_file = None
+    if "--exam-card" in sys.argv:
+        try:
+            exam_card_file = sys.argv[sys.argv.index("--exam-card") + 1]
+        except IndexError:
+            print("Error: --exam-card requires a path argument.")
+            sys.exit(1)
+    elif len(sys.argv) > 4 and not sys.argv[4].startswith("-"):
+        # Legacy positional form: <dicom_file> <json_file> <output_file> <exam_card_file>.
+        # Only honored when the 4th argument isn't itself a flag, since with any other
+        # optional flag also passed (e.g. --compute-slice-timing) it would otherwise be
+        # misread as the exam card path.
+        exam_card_file = sys.argv[4]
 
     compute_slice_timing = "--compute-slice-timing" in sys.argv
     slice_order_arg = None

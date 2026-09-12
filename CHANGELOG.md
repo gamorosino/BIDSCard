@@ -6,7 +6,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased]
+## [1.0.0] - 2026-09-11
+
+### Fixed
+
+- **`requirements.txt`** — Bumps the pinned `dcm2niix` version from
+  `1.0.20241211` to `1.0.20260724`. The old pin built from source via CMake
+  and failed on current systems: its bundled `ucm.cmake` set
+  `cmake_minimum_required(VERSION 2.8.12)`, and CMake has since removed
+  compatibility with versions below 3.5, making `pip install -r
+  requirements.txt` fail outright on any host with a modern CMake. The new
+  pin ships a prebuilt manylinux wheel, so it doesn't need to build from
+  source at all. (Conda and Docker installs were unaffected, since they
+  already install prebuilt `dcm2niix` binaries via conda-forge/apt.)
+- **`update_json_sidecar.py`** — Adds a proper `--exam-card <path>` flag,
+  matching `dcm_convert.py`. Previously the Exam Card path was read from an
+  undocumented positional 4th argument (`sys.argv[4]`), which broke as soon
+  as any other flag was also passed: e.g. `update_json_sidecar.py a.dcm
+  b.json out.json --compute-slice-timing` silently read the literal string
+  `--compute-slice-timing` as the Exam Card path. The old positional form is
+  still accepted for backward compatibility, but only when no other flags
+  are passed.
 
 ### Changed
 
