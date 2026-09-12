@@ -440,5 +440,5 @@ This software was developed and tested using data from the Philips 3T Ingenia CX
 
 # Acknowledgments
 
-We thank **Eric Wilkey** and **Elton (Ellie) Cross** for testing and helpful feedback that improved this tool.
+We thank **Eric Wilkey**, **Elton (Ellie) Cross**, and **Shelby Buettner** for testing and helpful feedback that improved this tool.
 
